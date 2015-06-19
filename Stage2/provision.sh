@@ -16,12 +16,22 @@ export SOFTWARE="/u01/software"
 
 installPackages()
 {
-  echo "installing oracle pre-requirements" 
-  PACKAGES="oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 oracleasm-support.x86_64" 
+  #echo "installing oracle pre-requirements" 
+  PACKAGES=$1
+  #PACKAGES="oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 oracleasm-support.x86_64" 
   rpm -q $PACKAGES 
   if [ $? -ne 0 ]; then 
     #yum clean all 
     yum -y install $PACKAGES  
+  fi
+}
+
+removePackages()
+{
+  PACKAGES=$1
+  rpm -q $PACKAGES 
+  if [ $? -eq 0 ]; then 
+    yum -y remove $PACKAGES  
   fi
 }
 
@@ -112,14 +122,54 @@ configureOracleASM()
   /usr/sbin/oracleasm configure -i
 
 }
-   
-   
-   
-   
-   
+
+createPT()
+{
+  # Create partition table and write it to disk
+  if [ ! -e /dev/${1}1 ]; then
+    for disk in $1 ; do
+    fdisk /dev/$disk  << EOF
+n
+p
+1
+1
+
+w
+EOF
+    done
+    if [ $? -ne 0 ]; then
+      echo "Something went wrong with fdisk"
+      exit
+    fi
+  fi
+}
+
+installVNC()
+{
+  echo "installing packages for VNC" 
+  PACKAGES=$1 
+  rpm -q $PACKAGES 
+  if [ $? -ne 0 ]; then 
+    #yum clean all 
+    yum -y install $PACKAGES  
+  fi
+}
+
+serviceNTP()
+{
+  if [ $1 = "on" ]; then
+    service ntpd start
+    chkconfig ntpd on
+  elif [ $1 = "off" ]; then
+    service ntpd stop
+    chkconfig ntpd off
+  fi
+}
 
 
-
+#  /etc/resolv.conf - can't find logitech: NXDOMAIN
+   
+   
 ##############
 #
 # Main
@@ -129,10 +179,17 @@ configureOracleASM()
 # Proxy
 [ -f /vagrant/proxy.env ] && source /vagrant/proxy.env
 
-installPackages
+installPackages "oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 ntp"
+removePackages "oracleasm-support.x86_64"
+serviceNTP "on"
 createGroups
 createUsers
 unpackSoftware
 createDirectories
 addUmask
 addResourceLimits
+createPT "sdb"
+
+
+# Install following for graphical install
+installPackages "tigervnc-server xterm twm" 

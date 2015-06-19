@@ -1,3 +1,5 @@
 yum/
 */.vagrant/
 */asmdisk1.vdi
+.DS_Store
+Stage2/.DS_Store
