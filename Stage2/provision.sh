@@ -144,17 +144,6 @@ EOF
   fi
 }
 
-installVNC()
-{
-  echo "installing packages for VNC" 
-  PACKAGES=$1 
-  rpm -q $PACKAGES 
-  if [ $? -ne 0 ]; then 
-    #yum clean all 
-    yum -y install $PACKAGES  
-  fi
-}
-
 serviceNTP()
 {
   if [ $1 = "on" ]; then
