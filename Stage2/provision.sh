@@ -97,14 +97,14 @@ addResourceLimits()
 {
   # Review runInstaller with no settings to determine which are needed
   # Starting with a clean box - assume parameters are not larger
-  # PENDING 20150618: Add in check for 'unlimited'
+  # PENDING 20150619: Repeats lines - grep check needed?
 
-  if [ `ulimit -Sn` -lt  "1024" ]; then echo "grid     soft     nofile       1024" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Hn` -lt "65536" ]; then echo "grid     hard     nofile      65536" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Su` -lt  "2047" ]; then echo "grid     soft     nproc        2047" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Hu` -lt "16384" ]; then echo "grid     hard     nproc       16384" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Ss` -lt "10240" ]; then echo "grid     soft     stack       10240" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Hs` -lt "32768" ]; then echo "grid     hard     stack       32768" >> /etc/security/limits.conf; fi
+  if [ `ulimit -Sn` -lt  1024 ]; then echo "grid     soft     nofile       1024" >> /etc/security/limits.conf; fi
+  if [ `ulimit -Hn` -lt 65536 ]; then echo "grid     hard     nofile      65536" >> /etc/security/limits.conf; fi
+  if [ `ulimit -Su` -lt  2047 ]; then echo "grid     soft     nproc        2047" >> /etc/security/limits.conf; fi
+  if [ `ulimit -Hu` -lt 16384 ]; then echo "grid     hard     nproc       16384" >> /etc/security/limits.conf; fi
+  if [ `ulimit -Ss` -lt 10240 ]; then echo "grid     soft     stack       10240" >> /etc/security/limits.conf; fi
+  if [  `ulimit -Hs` = "unlimited" ] || [ `ulimit -Hs` -lt "32768" ]; then echo "grid     hard     stack       32768" >> /etc/security/limits.conf; fi
 }
  
 configureOracleASM()
