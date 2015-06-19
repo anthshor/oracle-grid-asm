@@ -182,3 +182,8 @@ createPT "sdb"
 
 # Install following for graphical install
 installPackages "tigervnc-server xterm twm" 
+
+# Remember to run this post root scripts...
+# /u01/12.1.0/grid_1/perl/bin/perl -I/u01/12.1.0/grid_1/perl/lib -I/u01/12.1.0/grid_1/crs/install /u01/12.1.0/grid_1/crs/install/roothas.pl
+
+# ASMFD requires asm to be installed to configured??
