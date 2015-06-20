@@ -155,6 +155,27 @@ serviceNTP()
   fi
 }
 
+configureASMlib()
+{
+  /usr/sbin/oracleasm configure -i <<EOF
+grid
+asmadmin
+y 
+y
+EOF
+
+/usr/sbin/oracleasm init
+
+}
+
+createASMdisk()
+{
+  if [ `/usr/sbin/oracleasm listdisks | wc -l` -eq 0 ]; then
+    /usr/sbin/oracleasm createdisk asmdisk1 /dev/sdb1
+  else 
+    echo "ASM disks found, skipping oracleasm createdisk"
+  fi
+}
 
 #  /etc/resolv.conf - can't find logitech: NXDOMAIN
    
@@ -168,8 +189,8 @@ serviceNTP()
 # Proxy
 [ -f /vagrant/proxy.env ] && source /vagrant/proxy.env
 
-installPackages "oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 ntp"
-removePackages "oracleasm-support.x86_64"
+installPackages "oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 ntp oracleasm-support.x86_64"
+#removePackages "oracleasm-support.x86_64"
 serviceNTP "on"
 createGroups
 createUsers
@@ -177,13 +198,21 @@ unpackSoftware
 createDirectories
 addUmask
 addResourceLimits
+configureASMlib
 createPT "sdb"
+createASMdisk
 
 
 # Install following for graphical install
 installPackages "tigervnc-server xterm twm" 
 
-# Remember to run this post root scripts...
+# Add manual ASMFD steps to script 20150620
+
+
+
+
+
+# Remember to run this post root scripts if cluster...
 # /u01/12.1.0/grid_1/perl/bin/perl -I/u01/12.1.0/grid_1/perl/lib -I/u01/12.1.0/grid_1/crs/install /u01/12.1.0/grid_1/crs/install/roothas.pl
 
-# ASMFD requires asm to be installed to configured??
+# ASMFD requires asm to be installed to configure??
