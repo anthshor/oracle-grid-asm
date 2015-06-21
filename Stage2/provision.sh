@@ -179,7 +179,8 @@ createASMdisk()
 
 installGrid()
 {
-  su - grid -c "/u01/stage/grid/runInstaller -silent oracle.install.asm.SYSASMPassword=oracle12 oracle.install.asm.monitorPassword=oracle12c \
+  su - grid -c "/u01/stage/grid/runInstaller -silent -waitforcompletion \
+oracle.install.asm.SYSASMPassword=oracle12 oracle.install.asm.monitorPassword=oracle12c \
 ORACLE_HOSTNAME=logitech.sprite.zero \
 INVENTORY_LOCATION=/u01/app/oraInventory \
 SELECTED_LANGUAGES=en \
