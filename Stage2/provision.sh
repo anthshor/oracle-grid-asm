@@ -177,6 +177,47 @@ createASMdisk()
   fi
 }
 
+installGrid()
+{
+  su - grid -c "/u01/stage/grid/runInstaller -silent oracle.install.asm.SYSASMPassword=oracle12 oracle.install.asm.monitorPassword=oracle12c \
+ORACLE_HOSTNAME=logitech.sprite.zero \
+INVENTORY_LOCATION=/u01/app/oraInventory \
+SELECTED_LANGUAGES=en \
+oracle.install.option=HA_CONFIG \
+ORACLE_BASE=/u01/app/grid \
+ORACLE_HOME=/u01/12.1.0/grid \
+oracle.install.asm.OSDBA=asmdba \
+oracle.install.asm.OSOPER=asmoper \
+oracle.install.asm.OSASM=asmadmin \
+oracle.install.crs.config.ClusterType=STANDARD \
+oracle.install.crs.config.gpnp.configureGNS=false \
+oracle.install.crs.config.autoConfigureClusterNodeVIP=true \
+oracle.install.crs.config.gpnp.gnsOption=CREATE_NEW_GNS \
+oracle.install.crs.config.sharedFileSystemStorage.votingDiskRedundancy=NORMAL \
+oracle.install.crs.config.sharedFileSystemStorage.ocrRedundancy=NORMAL \
+oracle.install.crs.config.useIPMI=false \
+oracle.install.asm.diskGroup.name=DATA \
+oracle.install.asm.diskGroup.redundancy=EXTERNAL \
+oracle.install.asm.diskGroup.AUSize=1 \
+oracle.install.asm.diskGroup.disks=/dev/oracleasm/disks/ASMDISK1 \
+oracle.install.asm.diskGroup.diskDiscoveryString=/dev/oracleasm/disks \
+oracle.install.crs.config.ignoreDownNodes=false \
+oracle.install.config.managementOption=NONE \
+oracle.install.config.omsPort=0"
+
+/u01/app/oraInventory/orainstRoot.sh
+/u01/12.1.0/grid/root.sh
+
+touch /tmp/cf.rsp
+echo "oracle.assistants.asm|S_ASMPASSWORD=oracle12" > /tmp/cf.rsp
+echo "oracle.assistants.asm|S_ASMMONITORPASSWORD=oracle12" >> /tmp/cf.rsp
+chmod 600 /tmp/cf.rsp
+chown grid:oinstall /tmp/cf.rsp
+
+su - grid -c "/u01/12.1.0/grid/cfgtoollogs/configToolAllCommands RESPONSE_FILE=/tmp/cf.rsp"
+
+}
+
 #  /etc/resolv.conf - can't find logitech: NXDOMAIN
    
    
@@ -204,7 +245,10 @@ createASMdisk
 
 
 # Install following for graphical install
-installPackages "tigervnc-server xterm twm" 
+## installPackages "tigervnc-server xterm twm" 
+
+# Add runInstaller silent install
+installGrid
 
 # Add manual ASMFD steps to script 20150620
 
