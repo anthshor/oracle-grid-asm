@@ -6,6 +6,7 @@
 export STAGE="/u01/stage"
 export SOFTWARE="/u01/software"
 export PASSWORD="Password1#"
+export GRID_HOME="/u01/12.1.0/grid"
 
 ###################
 # Functions
@@ -93,7 +94,6 @@ addUmask(){
 addResourceLimits(){
   # Review runInstaller with no settings to determine which are needed
   # Starting with a clean box - assume parameters are not larger
-  # PENDING 20150619: Repeats lines - grep check needed?
 
   updateLimits(){
     if [ $# -eq 4 ]; then
@@ -198,6 +198,11 @@ sudo -E -H -u grid /u01/12.1.0/grid/cfgtoollogs/configToolAllCommands RESPONSE_F
 
 }
 
+runASMCA()
+{
+  sudo -E -H -u grid ${GRID_HOME}/bin/asmca -silent -createDiskGroup -diskGroupName $1 -disk /dev/sdc \
+-redundancy EXTERNAL -sysAsmPassword ${PASSWORD}
+}
 #  /etc/resolv.conf - can't find logitech: NXDOMAIN
    
    
@@ -220,8 +225,11 @@ unpackSoftware
 createDirectories
 addUmask
 addResourceLimits
-# Add runInstaller silent install
-installGrid
+# Install grid and asm
+[ -f ${GRID_HOME}/root.sh ] || installGrid
+# Add FRA disk group
+[ `su grid -c "/u01/12.1.0/grid/bin/asmcmd ls | grep -i fra | wc -l"` -ne 0 ] || runASMCA FRA
+
 # Add manual ASMFD steps to script 20150620
 # Remember to run this post root scripts if cluster...
 # /u01/12.1.0/grid_1/perl/bin/perl -I/u01/12.1.0/grid_1/perl/lib -I/u01/12.1.0/grid_1/crs/install /u01/12.1.0/grid_1/crs/install/roothas.pl
