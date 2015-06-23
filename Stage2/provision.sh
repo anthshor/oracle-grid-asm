@@ -2,41 +2,32 @@
 
 # Provisioning script for Oracle Grid and ASM
 # -------------------------------------------
-
 # define the global variables
-
 export STAGE="/u01/stage"
 export SOFTWARE="/u01/software"
+export PASSWORD="Password1#"
 
 ###################
-#
 # Functions
-#
 ###################
 
-installPackages()
-{
-  #echo "installing oracle pre-requirements" 
-  PACKAGES=$1
-  #PACKAGES="oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 oracleasm-support.x86_64" 
+installPackages(){
+  PACKAGES=$@
   rpm -q $PACKAGES 
   if [ $? -ne 0 ]; then 
-    #yum clean all 
     yum -y install $PACKAGES  
   fi
 }
 
-removePackages()
-{
-  PACKAGES=$1
+removePackages(){
+  PACKAGES=$@
   rpm -q $PACKAGES 
   if [ $? -eq 0 ]; then 
     yum -y remove $PACKAGES  
   fi
 }
 
-createGroups()
-{
+createGroups(){
   # create the extra groups for db12c role separation
   echo "Checking groups for grid and oracle user"
 
@@ -51,8 +42,7 @@ createGroups()
   grep ^kmdba:     /etc/group 2>&1 > /dev/null || groupadd -g 54326 kmdba
 }
 
-createUsers()
-{
+createUsers(){
   #create or modify as required user grid and oracle
   echo "verifying grid user"
   id grid   2>&1  > /dev/null  && usermod -a -g oinstall -G asmdba,asmadmin,asmoper,dba grid || useradd -u 54320 -g oinstall -G asmdba,asmadmin,asmoper,dba grid
@@ -65,8 +55,7 @@ createUsers()
 }
 
 
-unpackSoftware()
-{
+unpackSoftware(){
   # Unpack previously downloaded software
   [ -d /u01 ] || mkdir /u01 
   [ -d /u02 ] || mkdir /u02 
@@ -74,15 +63,14 @@ unpackSoftware()
   [ -d ${STAGE} ] || mkdir ${STAGE}
 
   pushd ${STAGE}
-    unzip -n ${SOFTWARE}/linuxamd64_12102_database_1of2.zip 
+    [ -f ${SOFTWARE}/linuxamd64_12102_database_1of2.zip ] && unzip -n ${SOFTWARE}/linuxamd64_12102_database_1of2.zip
     unzip -n ${SOFTWARE}/linuxamd64_12102_database_2of2.zip
     unzip -n ${SOFTWARE}/linuxamd64_12102_grid_1of2.zip
     unzip -n ${SOFTWARE}/linuxamd64_12102_grid_2of2.zip
   popd
 }
 
-createDirectories()
-{
+createDirectories(){
   mkdir -p /u01/12.1.0/grid
   mkdir -p /u01/app/12.1.0/grid
   mkdir -p /u01/app/grid
@@ -92,39 +80,42 @@ createDirectories()
   chown -R grid:oinstall /u01
   chmod -R 775 /u01/
   chown oracle:oinstall /u01/app/oracle
-
 }
 
-addUmask()
-{
+addUmask(){
+  #WHY???
   grep "umask 022" /home/grid/.bash_profile 
   if [ $? -ne 0 ]; then
     su - grid -c 'echo "umask 022" >> .bash_profile;'
   fi
 }
 
-addResourceLimits()
-{
+addResourceLimits(){
   # Review runInstaller with no settings to determine which are needed
   # Starting with a clean box - assume parameters are not larger
   # PENDING 20150619: Repeats lines - grep check needed?
 
-  if [ `ulimit -Sn` -lt  1024 ]; then echo "grid     soft     nofile       1024" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Hn` -lt 65536 ]; then echo "grid     hard     nofile      65536" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Su` -lt  2047 ]; then echo "grid     soft     nproc        2047" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Hu` -lt 16384 ]; then echo "grid     hard     nproc       16384" >> /etc/security/limits.conf; fi
-  if [ `ulimit -Ss` -lt 10240 ]; then echo "grid     soft     stack       10240" >> /etc/security/limits.conf; fi
-  if [  `ulimit -Hs` = "unlimited" ] || [ `ulimit -Hs` -lt "32768" ]; then echo "grid     hard     stack       32768" >> /etc/security/limits.conf; fi
+  updateLimits(){
+    if [ $# -eq 4 ]; then
+      [ -f /etc/security/limits.conf.ori ] || cp /etc/security/limits.conf /etc/security/limits.conf.ori
+      > /etc/security/limits.conf.tmp
+      mv /etc/security/limits.conf /etc/security/limits.conf.tmp
+      grep -v -E "$2.*.$3" /etc/security/limits.conf.tmp >> /etc/security/limits.conf
+      echo $@ >> /etc/security/limits.conf
+    fi
+  }
+
+  if [ `ulimit -Sn` -lt  1024 ]; then updateLimits grid     soft     nofile       1024 ; fi
+  if [ `ulimit -Hn` -lt 65536 ]; then updateLimits grid     hard     nofile      65536 ; fi
+  if [ `ulimit -Su` -lt  2047 ]; then updateLimits grid     soft     nproc        2047 ; fi
+  if [ `ulimit -Hu` -lt 16384 ]; then updateLimits grid     hard     nproc       16384 ; fi
+  if [ `ulimit -Ss` -lt 10240 ]; then updateLimits grid     soft     stack       10240 ; fi
+  if [ `ulimit -Hs` = "unlimited" ] || [ `ulimit -Hs` -lt 32768 ]; then updateLimits grid     hard     stack       32768 ; fi
 }
  
-configureOracleASM()
-{
-  /usr/sbin/oracleasm configure -i
-
-}
-
 createPT()
 {
+  #ugly
   # Create partition table and write it to disk
   if [ ! -e /dev/${1}1 ]; then
     for disk in $1 ; do
@@ -147,7 +138,7 @@ EOF
 serviceNTP()
 {
   if [ $1 = "on" ]; then
-    service ntpd start
+    service ntpd status && service ntpd restart || service ntpd start
     chkconfig ntpd on
   elif [ $1 = "off" ]; then
     service ntpd stop
@@ -155,33 +146,19 @@ serviceNTP()
   fi
 }
 
-configureASMlib()
-{
-  /usr/sbin/oracleasm configure -i <<EOF
-grid
-asmadmin
-y 
-y
-EOF
-
-/usr/sbin/oracleasm init
-
-}
-
-createASMdisk()
-{
-  if [ `/usr/sbin/oracleasm listdisks | wc -l` -eq 0 ]; then
-    /usr/sbin/oracleasm createdisk asmdisk1 /dev/sdb1
-  else 
-    echo "ASM disks found, skipping oracleasm createdisk"
-  fi
-}
-
 installGrid()
 {
-  su - grid -c "/u01/stage/grid/runInstaller -silent -waitforcompletion \
-oracle.install.asm.SYSASMPassword=oracle12 oracle.install.asm.monitorPassword=oracle12c \
-ORACLE_HOSTNAME=logitech.sprite.zero \
+  #sudo -E -H -u grid command variables \
+  #more variables
+
+  #data
+  chown grid:asmadmin /dev/sdb
+  #fra
+  chown grid:asmadmin /dev/sdc
+
+  sudo -E -H -u grid /u01/stage/grid/runInstaller -silent -waitforcompletion \
+oracle.install.asm.SYSASMPassword=${PASSWORD} oracle.install.asm.monitorPassword=${PASSWORD} \
+ORACLE_HOSTNAME=${HOSTNAME} \
 INVENTORY_LOCATION=/u01/app/oraInventory \
 SELECTED_LANGUAGES=en \
 oracle.install.option=HA_CONFIG \
@@ -200,22 +177,24 @@ oracle.install.crs.config.useIPMI=false \
 oracle.install.asm.diskGroup.name=DATA \
 oracle.install.asm.diskGroup.redundancy=EXTERNAL \
 oracle.install.asm.diskGroup.AUSize=1 \
-oracle.install.asm.diskGroup.disks=/dev/oracleasm/disks/ASMDISK1 \
-oracle.install.asm.diskGroup.diskDiscoveryString=/dev/oracleasm/disks \
+oracle.install.asm.diskGroup.disks=/dev/sdb \
+oracle.install.asm.diskGroup.diskDiscoveryString=/dev/sd* \
 oracle.install.crs.config.ignoreDownNodes=false \
 oracle.install.config.managementOption=NONE \
-oracle.install.config.omsPort=0"
+oracle.install.config.omsPort=0
 
 /u01/app/oraInventory/orainstRoot.sh
 /u01/12.1.0/grid/root.sh
 
-touch /tmp/cf.rsp
-echo "oracle.assistants.asm|S_ASMPASSWORD=oracle12" > /tmp/cf.rsp
-echo "oracle.assistants.asm|S_ASMMONITORPASSWORD=oracle12" >> /tmp/cf.rsp
-chmod 600 /tmp/cf.rsp
-chown grid:oinstall /tmp/cf.rsp
+export RESPONSE_FILE=/var/tmp/cf.rsp
 
-su - grid -c "/u01/12.1.0/grid/cfgtoollogs/configToolAllCommands RESPONSE_FILE=/tmp/cf.rsp"
+> ${RESPONSE_FILE}
+echo "oracle.assistants.asm|S_ASMPASSWORD=${PASSWORD}" >> ${RESPONSE_FILE}
+echo "oracle.assistants.asm|S_ASMMONITORPASSWORD=${PASSWORD}" >> ${RESPONSE_FILE}
+chmod 600 ${RESPONSE_FILE}
+chown grid:oinstall ${RESPONSE_FILE}
+
+sudo -E -H -u grid /u01/12.1.0/grid/cfgtoollogs/configToolAllCommands RESPONSE_FILE=${RESPONSE_FILE}
 
 }
 
@@ -231,33 +210,21 @@ su - grid -c "/u01/12.1.0/grid/cfgtoollogs/configToolAllCommands RESPONSE_FILE=/
 # Proxy
 [ -f /vagrant/proxy.env ] && source /vagrant/proxy.env
 
-installPackages "oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 ntp oracleasm-support.x86_64"
-#removePackages "oracleasm-support.x86_64"
-serviceNTP "on"
+installPackages oracle-rdbms-server-12cR1-preinstall.x86_64 xorg-x11-xauth.x86_64 xorg-x11-server-utils.x86_64 ntp
+# Install following for graphical install
+installPackages tigervnc-server xterm twm 
+serviceNTP on
 createGroups
 createUsers
 unpackSoftware
 createDirectories
 addUmask
 addResourceLimits
-configureASMlib
-createPT "sdb"
-createASMdisk
-
-
-# Install following for graphical install
-## installPackages "tigervnc-server xterm twm" 
-
 # Add runInstaller silent install
 installGrid
-
 # Add manual ASMFD steps to script 20150620
-
-
-
-
-
 # Remember to run this post root scripts if cluster...
 # /u01/12.1.0/grid_1/perl/bin/perl -I/u01/12.1.0/grid_1/perl/lib -I/u01/12.1.0/grid_1/crs/install /u01/12.1.0/grid_1/crs/install/roothas.pl
-
 # ASMFD requires asm to be installed to configure??
+
+true

@@ -1,5 +1,6 @@
 yum/
 */.vagrant/
-*/asmdisk1.vdi
+*/asmdisk*.vdi
 .DS_Store
 Stage2/.DS_Store
+*/proxy.env
