@@ -8,6 +8,7 @@ export SOFTWARE="/u01/software"
 export PASSWORD="Password1#"
 export GRID_HOME="/u01/12.1.0/grid"
 
+
 ###################
 # Functions
 ###################
@@ -200,8 +201,17 @@ sudo -E -H -u grid /u01/12.1.0/grid/cfgtoollogs/configToolAllCommands RESPONSE_F
 
 runASMCA()
 {
-  sudo -E -H -u grid ${GRID_HOME}/bin/asmca -silent -createDiskGroup -diskGroupName $1 -disk /dev/sdc \
--redundancy EXTERNAL -sysAsmPassword ${PASSWORD}
+ > /tmp/runASMCA
+echo "export LD_LIBRARY_PATH=/u01/12.1.0/grid/lib" >> /tmp/runASMCA
+echo "export ORACLE_SID=+ASM" >> /tmp/runASMCA
+echo "export ORACLE_BASE=/u01/app/grid" >> /tmp/runASMCA
+echo "export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin:/u01/12.1.0/grid/bin" >> /tmp/runASMCA
+echo "export ORACLE_HOME=/u01/12.1.0/grid" >> /tmp/runASMCA
+echo "asmcmd ls" >> /tmp/runASMCA
+echo "${GRID_HOME}/bin/asmca -silent -createDiskGroup -diskGroupName $1 -disk /dev/sdc -redundancy EXTERNAL -sysAsmPassword ${PASSWORD}" >> /tmp/runASMCA
+chmod +x /tmp/runASMCA
+sudo -E -H -u grid /tmp/runASMCA 
+[ -f /tmp/runASMCA ] && rm /tmp/runASMCA
 }
 #  /etc/resolv.conf - can't find logitech: NXDOMAIN
    
@@ -228,9 +238,15 @@ addResourceLimits
 # Install grid and asm
 [ -f ${GRID_HOME}/root.sh ] || installGrid
 # Add FRA disk group
+
+# Issue : check below fails - need to set env or use another check
+
 [ `su grid -c "/u01/12.1.0/grid/bin/asmcmd ls | grep -i fra | wc -l"` -ne 0 ] || runASMCA FRA
 
-# Add manual ASMFD steps to script 20150620
+# Requirement 1 - Add manual ASMFD steps to script 20150620
+
+# Notes
+# -----
 # Remember to run this post root scripts if cluster...
 # /u01/12.1.0/grid_1/perl/bin/perl -I/u01/12.1.0/grid_1/perl/lib -I/u01/12.1.0/grid_1/crs/install /u01/12.1.0/grid_1/crs/install/roothas.pl
 # ASMFD requires asm to be installed to configure??
