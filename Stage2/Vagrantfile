@@ -1,15 +1,17 @@
 vm_name = "logitech.sprite.zero"
+vm_disk_data = 1
+vm_disk_fra = 1
 Vagrant.configure(2) do |config|
+  vm_disk = vm_disk_data+vm_disk_fra
   config.vm.box = "anthshor/OracleLinux66"
   config.vm.hostname = vm_name
-  #to cache yum
-  config.vm.synced_folder "yum/", "/var/cache/yum", create: true
-  config.vm.synced_folder "~/Dropbox/Hashicorp/Vagrant/software", "/u01/software", create: true
+  config.vm.synced_folder "~/Dropbox/HC/software", "/u01/software", create: true
+  config.vm.synced_folder "~/proxy", "/proxy"
   config.vm.network "private_network", ip: "192.168.33.11" 
   config.vm.provider :virtualbox do |vb|
     vb.customize ['modifyvm', :id, '--memory', '4096']
     vb.name=vm_name
-    (1..2).each do |i|
+    (1..vm_disk).each do |i|
       disk="asmdisk#{i}.vdi"
       port=i
       vb.customize ['createhd', '--filename', disk, '--size', '5128'] unless File.exists?(disk)

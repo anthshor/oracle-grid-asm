@@ -6,5 +6,5 @@ Create a VM with Oracle Grid and ASM
 | Stage | Description | Wiki Contents|
 | ------------- |:-------------:|:-------------:|
 | Stage1 | Manual Install of Grid and ASM | [Manual steps to install Oracle Grid and ASM](https://github.com/anthshor/oracle-grid-asm/wiki)|
-| Stage2 | Automated Install of Grid and ASM | tbc |
+| Stage2 | Automated Install of Grid | tbc |
  
