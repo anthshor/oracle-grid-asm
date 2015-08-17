@@ -96,11 +96,17 @@ chown -R grid:oinstall /u01
 chmod -R 775 /u01/
 chown oracle:oinstall /u01/app/oracle
 
-# Add umask to grid - ??
-grep "umask 022" /home/grid/.bash_profile
-if [ $? -ne 0 ]; then
-  echo "umask 022" | sudo -u grid tee -a /home/grid/.bash_profile
-fi
+# Add umask to grid - oracle
+# from https://docs.oracle.com/database/121/CWLIN/usrgrps.htm
+# 6.2.1 Environment Requirements for Oracle Software Owners
+
+for user in grid oracle ; do
+  grep "umask 022" /home/$user/.bash_profile
+  if [ $? -ne 0 ]; then
+    echo "umask 022" | sudo -u $user tee -a /home/$user/.bash_profile
+  fi
+done
+
 
 # Update user limits
 if [ `ulimit -Sn` -lt  1024 ]; then updateLimits grid     soft     nofile       1024 ; fi
